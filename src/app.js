@@ -12,9 +12,10 @@ import errorHandler from './middlewares/error.middleware.js';
 import authMiddleware from './middlewares/auth.middleware.js';
 
 // Routes
-import authRoutes from './routes/auth.route.js';
+import authRoutes from './routes/auth.routes.js';
 import kidRoutes from './routes/kid.routes.js';
 import userRoutes from './routes/user.routes.js';
+import contactRoutes from './routes/contact.routes.js';
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use(
 app.use('/api/auth', authRoutes);
 app.use('/api/kids', requireAuth(), authMiddleware, kidRoutes);
 app.use('/api/users', requireAuth(), authMiddleware, userRoutes);
+app.use('/api/contacts', requireAuth(), authMiddleware, contactRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
