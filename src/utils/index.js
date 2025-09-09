@@ -13,3 +13,14 @@ export function calcAge(birthdayISO, onDate = new Date(), graceMonths = 0) {
 	}
 	return age;
 }
+
+export const getGender = type => {
+	switch (type) {
+		case 'Boys':
+			return 'Male';
+		case 'Girls':
+			return 'Female';
+		default:
+			return 'Other';
+	}
+};

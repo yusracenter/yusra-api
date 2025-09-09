@@ -16,6 +16,8 @@ import authRoutes from './routes/auth.routes.js';
 import kidRoutes from './routes/kid.routes.js';
 import userRoutes from './routes/user.routes.js';
 import contactRoutes from './routes/contact.routes.js';
+import enrollmentRoutes from './routes/enrollment.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 
 const app = express();
 
@@ -37,6 +39,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/kids', requireAuth(), authMiddleware, kidRoutes);
 app.use('/api/users', requireAuth(), authMiddleware, userRoutes);
 app.use('/api/contacts', requireAuth(), authMiddleware, contactRoutes);
+app.use('/api/enrollments', requireAuth(), authMiddleware, enrollmentRoutes);
+app.use('/api/payments', requireAuth(), authMiddleware, paymentRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -136,3 +136,20 @@ export const completeProfileSchema = z.object({
 	address: z.string().min(1, { message: 'Address is required.' }),
 	phone: usPhoneE164,
 });
+
+export const createSubSchema = z.object({
+	programId: z.string({ required_error: 'Program ID is required.' }),
+	paymentMethodId: z.string({ required_error: 'Payment Method ID is required.' }),
+	kidId: z.string({ required_error: 'Kid ID is required.' }),
+	coupon: z.object({ id: z.string().optional() }).optional(),
+});
+
+export const enrollProgramSchema = z.object({
+	kidId: z.string({ required_error: 'Kid ID is required.' }),
+	contactId: z.string({ required_error: 'Contact ID is required.' }),
+	paymentMethodId: z.string({ required_error: 'Payment Method ID is required.' }),
+	programId: z.string({ required_error: 'Program ID is required.' }),
+	subscriptionId: z.string({ required_error: 'Subscription ID is required.' }),
+	programPrice: z.string({ required_error: 'Program Price is required.' }),
+	paymentMethod: z.string({ required_error: 'Payment Method is required.' }),
+});
