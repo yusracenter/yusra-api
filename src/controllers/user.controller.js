@@ -1,65 +1,86 @@
-import { UserRole, UserStatus } from '../helpers/enum.js';
-import qrCodeModel from '../models/qr-code.model.js';
-import userModel from '../models/user.model.js';
+import { clerkClient } from '@clerk/express';
 import { getUser } from '../utils/auth.js';
 import catchAsync from '../utils/catchAsync.js';
-import enrollmentModel from '../models/enrollment.model.js';
-import { stripe } from '../utils/stripe.js';
+import userModel from '../models/user.model.js';
 
-export const getKids = catchAsync(async (req, res) => {
+export const updateProfileImage = catchAsync(async (req, res) => {
 	const user = await getUser(req);
+	if (!user) return res.status(404).json({ message: 'User not found' });
+	if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-	const kids = await userModel
-		.find({
-			parent: user._id,
-			role: UserRole.KID,
-			status: UserStatus.ACTIVE,
-		})
-		.select('_id firstName lastName birthday gender qrCode qrCodeModel enrollments allergies notes')
-		.populate({
-			path: 'qrCodeModel',
-			model: qrCodeModel,
-			select: 'code eyeColor bgColor fgColor qrStyle logoWidth eyeRadius scanUrl',
-		});
+	const { buffer, mimetype, originalname } = req.file;
 
-	return res.status(200).json({ kids });
-});
-
-export const createKid = catchAsync(async (req, res) => {
-	const user = await getUser(req);
-	const data = { role: UserRole.KID, parent: user._id, ...req.body };
-	const createdUser = await userModel.create(data);
-	return res.status(201).json({ user: createdUser });
-});
-
-export const updateKid = catchAsync(async (req, res) => {
-	const { id } = req.params;
-	const data = req.body;
-
-	const updatedUser = await userModel.findByIdAndUpdate(id, data, { new: true });
-	return res.status(200).json({ user: updatedUser });
-});
-
-export const deleteKid = catchAsync(async (req, res) => {
-	const { id } = req.params;
-
-	const user = await userModel.findById(id);
-	if (!user) {
-		return res.status(404).json({ message: 'Kid not found' });
+	let fileParam;
+	if (typeof File !== 'undefined') {
+		fileParam = new File([buffer], originalname || 'avatar.jpg', { type: mimetype });
+	} else if (typeof Blob !== 'undefined') {
+		fileParam = new Blob([buffer], { type: mimetype });
+	} else {
+		fileParam = `data:${mimetype};base64,${buffer.toString('base64')}`;
 	}
 
-	const enrollment = await enrollmentModel.find({ kid: user._id, status: 'active' });
-	const subsIds = enrollment.map(sub => sub.subscriptionId);
+	const updated = await clerkClient.users.updateUserProfileImage(user.clerkId, {
+		file: fileParam,
+	});
 
-	for (const subId of subsIds) {
-		const sub = await stripe.subscriptions.retrieve(subId);
-		if (sub && ['active', 'trialing'].includes(sub.status)) {
-			return res.status(400).json({ message: 'Cannot delete kid with active subscriptions' });
-		}
-	}
+	return res.status(200).json({ message: 'Profile image updated successfully' });
+});
 
-	await qrCodeModel.findByIdAndDelete(user.qrCodeModel);
-	await userModel.findByIdAndUpdate(user._id, { status: UserStatus.INACTIVE });
+export const updateFullName = catchAsync(async (req, res) => {
+	const { firstName, lastName } = req.body;
+	const user = await getUser(req);
+	if (!user) return res.status(404).json({ message: 'User not found' });
 
-	return res.status(200).json({ message: 'Kid deleted successfully', id: user._id });
+	const updated = await clerkClient.users.updateUser(user.clerkId, {
+		firstName,
+		lastName,
+	});
+
+	return res.status(200).json({ message: 'Fullname updated successfully', id: user._id });
+});
+
+export const updateAddress = catchAsync(async (req, res) => {
+	const { address } = req.body;
+	const user = await getUser(req);
+	if (!user) return res.status(404).json({ message: 'User not found' });
+
+	const updated = await userModel.findByIdAndUpdate(user._id, { address }, { new: true });
+	if (!updated) return res.status(500).json({ message: 'Failed to update address' });
+
+	return res.status(200).json({ message: 'Address updated successfully', id: user._id });
+});
+
+export const deleteProfileImage = catchAsync(async (req, res) => {
+	const user = await getUser(req);
+	if (!user) return res.status(404).json({ message: 'User not found' });
+
+	await clerkClient.users.deleteUserProfileImage(user.clerkId);
+	return res.status(200).json({ message: 'Profile image deleted successfully' });
+});
+
+export const updatePhone = catchAsync(async (req, res) => {
+	const { phone } = req.body;
+	const user = await getUser(req);
+	if (!user) return res.status(404).json({ message: 'User not found' });
+
+	const updated = await userModel.findByIdAndUpdate(user._id, { phone }, { new: true });
+	if (!updated) return res.status(500).json({ message: 'Failed to update phone' });
+
+	return res.status(200).json({ message: 'Phone updated successfully', id: user._id });
+});
+
+export const completeProfile = catchAsync(async (req, res) => {
+	const { address, phone } = req.body;
+	const user = await getUser(req);
+	if (!user) return res.status(404).json({ message: 'User not found' });
+
+	const updated = await userModel.findByIdAndUpdate(
+		user._id,
+		{ address, phone, isCompleted: true },
+		{ new: true }
+	);
+
+	if (!updated) return res.status(500).json({ message: 'Failed to complete profile' });
+
+	return res.status(200).json({ message: 'Profile completed successfully', id: user._id });
 });

@@ -9,11 +9,12 @@ import { clerkWebhookHandler } from './controllers/clerk.controller.js';
 // Middlewares
 import notFound from './middlewares/notFound.middleware.js';
 import errorHandler from './middlewares/error.middleware.js';
+import authMiddleware from './middlewares/auth.middleware.js';
 
 // Routes
 import authRoutes from './routes/auth.route.js';
+import kidRoutes from './routes/kid.routes.js';
 import userRoutes from './routes/user.routes.js';
-import authMiddleware from './middlewares/auth.middleware.js';
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use(
 );
 
 app.use('/api/auth', authRoutes);
+app.use('/api/kids', requireAuth(), authMiddleware, kidRoutes);
 app.use('/api/users', requireAuth(), authMiddleware, userRoutes);
 
 app.use(notFound);
