@@ -32,12 +32,89 @@ export const createKid = catchAsync(async (req, res) => {
 	return res.status(201).json({ user: createdUser });
 });
 
+export const generateQRCode = catchAsync(async (req, res) => {
+	const { kidId, value, ...data } = req.body;
+
+	const kid = await userModel.findById(kidId);
+	if (!kid) {
+		return res.status(404).json({ message: 'Kid not found' });
+	}
+
+	if (!kid.enrollments) {
+		return res.status(400).json({ message: 'Kid has no enrollments' });
+	}
+
+	const existingQRCode = await qrCodeModel.findById(kid.qrCodeModel);
+	if (existingQRCode) {
+		return res.status(400).json({ message: 'QR Code already exists.' });
+	}
+
+	kid.qrCode = value;
+
+	const scanUrl = `${process.env.CLIENT_URL}/admin/static-scan?token=${kid.qrCode}`;
+
+	if (kid.qrCodeModel) {
+		await qrCodeModel.findByIdAndDelete(kid.qrCodeModel);
+	}
+
+	const createdQRCode = await qrCodeModel.create({
+		kid: kid._id,
+		code: value.toUpperCase(),
+		scanUrl,
+		...data,
+	});
+
+	kid.qrCodeModel = createdQRCode._id;
+	await kid.save();
+
+	return res.status(201).json({ qrCode: createdQRCode });
+});
+
 export const updateKid = catchAsync(async (req, res) => {
 	const { id } = req.params;
 	const data = req.body;
 
 	const updatedUser = await userModel.findByIdAndUpdate(id, data, { new: true });
 	return res.status(200).json({ user: updatedUser });
+});
+
+export const updateQRCode = catchAsync(async (req, res) => {
+	const { id } = req.params;
+	const data = req.body;
+
+	const kid = await userModel.findById(id);
+	if (!kid) {
+		return res.status(404).json({ message: 'Kid not found' });
+	}
+
+	if (!kid.qrCodeModel) {
+		return res.status(400).json({ message: 'Kid has no QR Code. Please generate one first.' });
+	}
+
+	const codeValue = data.value.toUpperCase();
+
+	const existingQRCode = await qrCodeModel.findOne({ code: codeValue });
+	if (existingQRCode) {
+		return res
+			.status(400)
+			.json({ message: 'QR Code value already exists. Please choose a different value.' });
+	}
+
+	const scanUrl = `${process.env.CLIENT_URL}/admin/static-scan?token=${codeValue}`;
+
+	const updatedQRCode = await qrCodeModel.findByIdAndUpdate(
+		kid.qrCodeModel,
+		{ ...data, value: codeValue, scanUrl, code: codeValue },
+		{ new: true, runValidators: true }
+	);
+
+	const updatedKid = await userModel.findByIdAndUpdate(
+		kid._id,
+		{ qrCode: codeValue },
+		{ new: true }
+	);
+
+	return res.status(200).json({ kid: updatedKid, qrCode: updatedQRCode });
 });
 
 export const deleteKid = catchAsync(async (req, res) => {

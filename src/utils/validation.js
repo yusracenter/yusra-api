@@ -101,6 +101,10 @@ export const idParamSchema = z.object({
 	id: z.string({ error: 'ID is required' }),
 });
 
+export const enrollmentIdParamSchema = z.object({
+	enrollmentId: z.string({ error: 'Enrollment ID is required' }),
+});
+
 export const updateImageBodySchema = z.object({}).strict();
 
 export const uploadedFileSchema = z.object({
@@ -152,4 +156,65 @@ export const enrollProgramSchema = z.object({
 	subscriptionId: z.string({ required_error: 'Subscription ID is required.' }),
 	programPrice: z.string({ required_error: 'Program Price is required.' }),
 	paymentMethod: z.string({ required_error: 'Payment Method is required.' }),
+});
+
+export const freeSubscriptionSchema = z.object({
+	programId: z.string({ required_error: 'Program ID is required.' }),
+	kidId: z.string({ required_error: 'Kid ID is required.' }),
+	couponId: z.string({ required_error: 'Coupon ID is required.' }),
+});
+
+export const paymentMethodSchema = z
+	.object({
+		paymentMethodId: z.string({ required_error: 'Payment Method ID is required.' }),
+	})
+	.strict();
+
+export const donateSchema = z
+	.object({
+		amount: z
+			.number({ required_error: 'Amount is required.' })
+			.min(1, { message: 'Minimum amount is $1.' }),
+		paymentMethodId: z.string({ required_error: 'Payment Method ID is required.' }),
+		isSave: z.boolean(),
+		brand: z.string(),
+		last4: z.string(),
+	})
+	.strict();
+
+export const autoRenewSchema = z.object({
+	toggleRenew: z.boolean({ required_error: 'Toggle renew is required.' }),
+});
+
+export const validateCouponSchema = z.object({
+	couponId: z.string({ required_error: 'Coupon ID is required.' }),
+});
+
+export const qrCodeSchema = z
+	.object({
+		kidId: z.string({ required_error: 'Kid ID is required.' }),
+		value: z.string({ required_error: 'Value is required.' }).min(4).max(4),
+		eyeColor: z.string().default('black'),
+		bgColor: z.string().default('white'),
+		fgColor: z.string().default('black'),
+		qrStyle: z.enum(['squares', 'dots', 'fluid']).default('squares'),
+		logoWidth: z.number().default(32),
+		eyeRadius: z.number().default(0),
+	})
+	.strict();
+
+export const updateQrCodeSchema = z
+	.object({
+		value: z.string({ required_error: 'Value is required.' }).min(4).max(4),
+		eyeColor: z.string().default('black'),
+		bgColor: z.string().default('white'),
+		fgColor: z.string().default('black'),
+		qrStyle: z.enum(['squares', 'dots', 'fluid']).default('squares'),
+		logoWidth: z.number().default(32),
+		eyeRadius: z.number().default(0),
+	})
+	.strict();
+
+export const qrCodeIdParamSchema = z.object({
+	id: z.string({ error: 'Kid ID is required' }),
 });

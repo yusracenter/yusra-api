@@ -8,6 +8,111 @@ import { stripe } from '../utils/stripe.js';
 import { getGender } from '../utils/index.js';
 import { attachPaymentMethod, getCustomer } from '../utils/customer.js';
 
+export const getEnrollmentProgram = catchAsync(async (req, res) => {
+	const user = await getUser(req);
+
+	if (!user) {
+		return res.status(404).json({ error: 'User not found' });
+	}
+
+	let users;
+
+	if (user.role === UserRole.STUDENT) {
+		const student = await userModel
+			.findById(user._id)
+			.populate({
+				path: 'enrollments',
+				model: enrollmentModel,
+				populate: { path: 'program', model: programModel },
+			})
+			.lean();
+
+		users = [student];
+	} else {
+		users = await userModel
+			.find({ parent: user._id, status: UserStatus.ACTIVE })
+			.select('avatar firstName lastName enrollments birthday gender role')
+			.populate({
+				path: 'enrollments',
+				model: enrollmentModel,
+				select: 'program subscriptionId status',
+				populate: { path: 'program', model: programModel, select: 'name type' },
+			})
+			.lean();
+	}
+
+	const result = await Promise.all(
+		(users ?? []).map(async kid => {
+			const enroll = kid?.enrollments;
+
+			if (!enroll || !enroll.subscriptionId) {
+				return kid;
+			}
+
+			let stripeSub;
+
+			try {
+				stripeSub = await stripe.subscriptions.retrieve(enroll.subscriptionId, {
+					expand: [
+						'default_payment_method',
+						'latest_invoice.payment_intent.payment_method',
+						'latest_invoice.discounts',
+					],
+				});
+			} catch (err) {}
+
+			return {
+				...kid,
+				enrollments: {
+					...enroll,
+					stripe: {
+						cancel_at_period_end: stripeSub?.cancel_at_period_end,
+						status: stripeSub?.status,
+						start_date: stripeSub?.start_date,
+						canceled_at: stripeSub?.canceled_at,
+						trial_end: stripeSub?.trial_end,
+						plan: { amount: stripeSub.plan.amount },
+						latest_invoice: {
+							discounts: {
+								name: stripeSub?.latest_invoice?.discounts?.[0]?.coupon?.name,
+								amount_off: stripeSub?.latest_invoice?.discounts?.[0]?.coupon?.amount_off,
+							},
+							created: stripeSub?.latest_invoice?.created,
+							invoice_pdf: stripeSub?.latest_invoice?.invoice_pdf,
+						},
+						default_payment_method: {
+							card: {
+								brand: stripeSub?.default_payment_method?.card?.brand,
+								last4: stripeSub?.default_payment_method?.card?.last4,
+							},
+						},
+					},
+				},
+			};
+		})
+	);
+
+	return res.status(200).json({ enrollments: result });
+});
+
+export const getPrograms = catchAsync(async (req, res) => {
+	const programs = await programModel.find().select('').lean();
+
+	return res.status(200).json({ programs });
+});
+
+export const getProgramById = catchAsync(async (req, res) => {
+	const { id } = req.params;
+
+	const program = await programModel.findById(id).lean();
+
+	if (!program) {
+		return res.status(404).json({ error: 'Program not found' });
+	}
+
+	return res.status(200).json({ program });
+});
+
 export const createSubscription = catchAsync(async (req, res) => {
 	const { programId, paymentMethodId, kidId, coupon } = req.body;
 
@@ -112,111 +217,124 @@ export const enrollProgram = catchAsync(async (req, res) => {
 	return res.status(200).json({ message: 'Enrollment successful', success: true });
 });
 
-export const getEnrollmentProgram = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+export const createFreeSubscription = catchAsync(async (req, res) => {
+	const { kidId, programId, couponId } = req.body;
 
+	const user = await getUser(req);
 	if (!user) {
 		return res.status(404).json({ error: 'User not found' });
 	}
 
-	let users;
-
-	if (user.role === UserRole.STUDENT) {
-		const student = await userModel
-			.findById(user._id)
-			.populate({
-				path: 'enrollments',
-				model: enrollmentModel,
-				populate: { path: 'program', model: programModel },
-			})
-			.lean();
-
-		users = [student];
-	} else {
-		users = await userModel
-			.find({ parent: user._id, status: UserStatus.ACTIVE })
-			.select('avatar firstName lastName enrollments birthday gender')
-			.populate({
-				path: 'enrollments',
-				model: enrollmentModel,
-				select: 'program subscriptionId status',
-				populate: { path: 'program', model: programModel, select: 'name type' },
-			})
-			.lean();
+	const kid = await userModel.findOne({ _id: kidId, parent: user._id, status: UserStatus.ACTIVE });
+	if (!kid) {
+		return res.status(404).json({ error: 'Kid not found' });
 	}
 
-	const result = await Promise.all(
-		(users ?? []).map(async kid => {
-			const enroll = kid?.enrollments;
-
-			if (!enroll || !enroll.subscriptionId) {
-				return kid;
-			}
-
-			let stripeSub;
-
-			try {
-				stripeSub = await stripe.subscriptions.retrieve(enroll.subscriptionId, {
-					expand: [
-						'default_payment_method',
-						'latest_invoice.payment_intent.payment_method',
-						'latest_invoice.discounts',
-					],
-				});
-			} catch (err) {}
-
-			return {
-				...kid,
-				enrollments: {
-					...enroll,
-					stripe: {
-						cancel_at_period_end: stripeSub?.cancel_at_period_end,
-						status: stripeSub?.status,
-						start_date: stripeSub?.start_date,
-						canceled_at: stripeSub?.canceled_at,
-						trial_end: stripeSub?.trial_end,
-						plan: { amount: stripeSub.plan.amount },
-						latest_invoice: {
-							discounts: [
-								{
-									coupon: {
-										name: stripeSub?.latest_invoice?.discounts?.[0]?.coupon?.name,
-										amount_off: stripeSub?.latest_invoice?.discounts?.[0]?.coupon?.amount_off,
-									},
-								},
-							],
-							created: stripeSub?.latest_invoice?.created,
-							invoice_pdf: stripeSub?.latest_invoice?.invoice_pdf,
-						},
-						default_payment_method: {
-							card: {
-								brand: stripeSub?.default_payment_method?.card?.brand,
-								last4: stripeSub?.default_payment_method?.card?.last4,
-							},
-						},
-					},
-				},
-			};
-		})
-	);
-
-	return res.status(200).json({ enrollments: result });
-});
-
-export const getPrograms = catchAsync(async (req, res) => {
-	const programs = await programModel.find().select('').lean();
-
-	return res.status(200).json({ programs });
-});
-
-export const getProgramById = catchAsync(async (req, res) => {
-	const { id } = req.params;
-
-	const program = await programModel.findById(id).lean();
-
+	const program = await programModel.findById(programId);
 	if (!program) {
 		return res.status(404).json({ error: 'Program not found' });
 	}
 
-	return res.status(200).json({ program });
+	if (kid.gender !== getGender(program.type)) {
+		return res.status(400).json({ error: 'Kid gender does not match program type' });
+	}
+
+	const existEnrollment = await enrollmentModel.findOne({
+		kid: kidId,
+		program: program._id.toString(),
+		status: 'active',
+	});
+
+	if (existEnrollment) {
+		return res.status(400).json({ error: 'Kid is already enrolled in this program' });
+	}
+
+	if (program.enrollments >= program.maxStudents) {
+		return res.status(400).json({
+			error:
+				'Sorry, this program is full. Please choose another program or contact support for more information.',
+		});
+	}
+
+	const customer = await getCustomer(user._id);
+
+	const subscription = await stripe.subscriptions.create({
+		customer: customer.id,
+		items: [{ price: program.priceId }],
+		metadata: {
+			userId: user._id.toString(),
+			programId: program._id.toString(),
+			brand: `FREE2025`,
+			programName: program.name,
+		},
+		discounts: [{ promotion_code: couponId }],
+	});
+
+	return res.status(200).json({ subscriptionId: subscription.id, status: subscription.status });
+});
+
+export const renewSubscription = catchAsync(async (req, res) => {
+	const { enrollmentId } = req.params;
+
+	const enrollment = await enrollmentModel.findById(enrollmentId);
+	if (!enrollment) {
+		return res.status(404).json({ error: 'Enrollment not found' });
+	}
+
+	if (enrollment.status === 'active') {
+		return res.status(400).json({ error: 'Enrollment is already active' });
+	}
+
+	await stripe.subscriptions.update(enrollment.subscriptionId, { cancel_at_period_end: false });
+
+	await enrollmentModel.findByIdAndUpdate(enrollmentId, { status: 'active' });
+
+	return res.status(200).json({ message: 'Subscription renewed successfully' });
+});
+
+export const toggleAutoRenew = catchAsync(async (req, res) => {
+	const user = await getUser(req);
+	if (!user) {
+		return res.status(404).json({ error: 'User not found' });
+	}
+
+	const { enrollmentId } = req.params;
+
+	const enrollment = await enrollmentModel.findById(enrollmentId);
+	if (!enrollment) {
+		return res.status(404).json({ error: 'No enrollment found' });
+	}
+
+	const { toggleRenew } = req.body;
+
+	await stripe.subscriptions.update(enrollment.subscriptionId, {
+		cancel_at_period_end: toggleRenew,
+	});
+
+	await enrollmentModel.findByIdAndUpdate(enrollmentId, { status: 'active' });
+
+	return res.status(200).json({ message: 'Auto-renew status updated successfully' });
+});
+
+export const cancelSubscription = catchAsync(async (req, res) => {
+	const { enrollmentId } = req.params;
+
+	const enrollment = await enrollmentModel.findById(enrollmentId);
+	if (!enrollment) {
+		return res.status(404).json({ error: 'Enrollment not found' });
+	}
+
+	if (enrollment.status === 'canceled') {
+		return res.status(400).json({ error: 'Enrollment is already canceled' });
+	}
+
+	await stripe.subscriptions.cancel(enrollment.subscriptionId);
+	await programModel.findOneAndUpdate(
+		{ _id: enrollment.program, enrollments: { $gt: 0 } },
+		{ $inc: { enrollments: -1 } }
+	);
+	await userModel.findByIdAndUpdate(enrollment.kid, { enrollments: null });
+	await enrollmentModel.findByIdAndUpdate(enrollmentId, { status: 'canceled' });
+
+	return res.status(200).json({ message: 'Subscription canceled successfully' });
 });
