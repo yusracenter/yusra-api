@@ -36,13 +36,14 @@ app.use(
 	})
 );
 
-app.use('/api/auth', authRoutes);
-app.use('/api/kids', requireAuth(), authMiddleware, kidRoutes);
-app.use('/api/users', requireAuth(), authMiddleware, userRoutes);
-app.use('/api/contacts', requireAuth(), authMiddleware, contactRoutes);
-app.use('/api/enrollments', requireAuth(), authMiddleware, enrollmentRoutes);
-app.use('/api/payments', requireAuth(), authMiddleware, paymentRoutes);
-app.use('/api/donation', donationRoutes);
+app.use('/auth', authRoutes);
+app.use('/kids', requireAuth(), authMiddleware, kidRoutes);
+app.use('/users', requireAuth(), authMiddleware, userRoutes);
+app.use('/contacts', requireAuth(), authMiddleware, contactRoutes);
+app.use('/enrollments', requireAuth(), authMiddleware, enrollmentRoutes);
+app.use('/payments', requireAuth(), authMiddleware, paymentRoutes);
+app.use('/donation', donationRoutes);
+app.use('/health', (req, res) => res.send('OK'));
 
 app.use(notFound);
 app.use(errorHandler);
