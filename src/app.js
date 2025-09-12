@@ -36,6 +36,9 @@ app.use(
 	})
 );
 
+// Routes will be deployed in api.yusracenter.org for production
+// api-dev.yusracenter.org for development
+// we should not add the /api prefix to the routes for cleaner URLs
 app.use('/auth', authRoutes);
 app.use('/kids', requireAuth(), authMiddleware, kidRoutes);
 app.use('/users', requireAuth(), authMiddleware, userRoutes);
