@@ -1,0 +1,28 @@
+name: "Build and Deploy"
+
+on:
+  push:
+    branches: [develop, prod]
+
+# Permission can be added at job level or workflow level
+# This is needed for AWS credentials
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+
+jobs:
+  deploy-to-dev:
+    name: Deploy to DEV ECS
+    if: github.ref == 'refs/heads/develop'
+    uses: ./.github/workflows/job-deploy.yml
+    with:
+      environment: dev
+    secrets: inherit
+
+  deploy-to-prod:
+    name: Deploy to PROD ECS
+    if: github.ref == 'refs/heads/prod'
+    uses: ./.github/workflows/job-deploy.yml
+    with:
+      environment: prod
+    secrets: inherit
