@@ -24,3 +24,43 @@ export const getGender = type => {
 			return 'Other';
 	}
 };
+
+export function formatDateKeyUS(d = new Date()) {
+	const parts = new Intl.DateTimeFormat('en-US', {
+		timeZone: 'America/New_York',
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+	}).formatToParts(d);
+
+	const mm = parts.find(p => p.type === 'month')?.value ?? '01';
+	const dd = parts.find(p => p.type === 'day')?.value ?? '01';
+	const yyyy = parts.find(p => p.type === 'year')?.value ?? '1970';
+
+	return `${mm}-${dd}-${yyyy}`;
+}
+
+export function monthKeysUS(year, monthIndex0) {
+	const keys = [];
+	const d = new Date(Date.UTC(year, monthIndex0, 1));
+	while (d.getUTCMonth() === monthIndex0) {
+		keys.push(formatDateKeyUS(new Date(d), 'America/New_York'));
+		d.setUTCDate(d.getUTCDate() + 1);
+	}
+	return keys;
+}
+
+export function getDuration(lessons) {
+	const totalMinutes = lessons.reduce(
+		(acc, lesson) => acc + parseInt(lesson.hours) * 60 + parseInt(lesson.minutes),
+		0
+	);
+
+	const hours = Math.floor(totalMinutes / 60);
+	const minutes = totalMinutes % 60;
+
+	const hoursDisplay = hours > 0 ? `${hours} hour${hours > 1 ? 's' : ''}` : '';
+	const minutesDisplay = minutes > 0 ? `${minutes} min${minutes > 1 ? 's' : ''}` : '';
+
+	return `${hoursDisplay}${hours > 0 && minutes > 0 ? ' ' : ''}${minutesDisplay}`;
+}

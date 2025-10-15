@@ -12,13 +12,14 @@ import {
 const router = express.Router();
 
 router.get('/', kidController.getKids);
+router.get('/attendance/:kidId', kidController.getKidsAttendance);
 
 router.post('/', validate({ body: kidSchema }), kidController.createKid);
-router.post('/generate-qr-code', validate({ body: qrCodeSchema }), kidController.generateQRCode);
+router.post('/generate-qrcode', validate({ body: qrCodeSchema }), kidController.generateQRCode);
 
 router.put('/:id', validate({ body: kidSchema, params: idParamSchema }), kidController.updateKid);
 router.put(
-	'/update-qr-code/:id',
+	'/update-qrcode/:id',
 	validate({ body: updateQrCodeSchema, params: qrCodeIdParamSchema }),
 	kidController.updateQRCode
 );

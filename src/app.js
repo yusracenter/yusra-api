@@ -1,7 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import { clerkMiddleware, requireAuth } from '@clerk/express';
+import { clerkMiddleware } from '@clerk/express';
 import cookieParser from 'cookie-parser';
 
 import { clerkWebhookHandler } from './controllers/clerk.controller.js';
@@ -9,16 +9,9 @@ import { clerkWebhookHandler } from './controllers/clerk.controller.js';
 // Middlewares
 import notFound from './middlewares/notFound.middleware.js';
 import errorHandler from './middlewares/error.middleware.js';
-import authMiddleware from './middlewares/auth.middleware.js';
 
 // Routes
-import authRoutes from './routes/auth.routes.js';
-import kidRoutes from './routes/kid.routes.js';
-import userRoutes from './routes/user.routes.js';
-import contactRoutes from './routes/contact.routes.js';
-import enrollmentRoutes from './routes/enrollment.routes.js';
-import paymentRoutes from './routes/payment.routes.js';
-import donationRoutes from './routes/donation.routes.js';
+import appRoutes from './routes/app.routes.js';
 
 const app = express();
 
@@ -36,13 +29,7 @@ app.use(
 	})
 );
 
-app.use('/api/auth', authRoutes);
-app.use('/api/kids', requireAuth(), authMiddleware, kidRoutes);
-app.use('/api/users', requireAuth(), authMiddleware, userRoutes);
-app.use('/api/contacts', requireAuth(), authMiddleware, contactRoutes);
-app.use('/api/enrollments', requireAuth(), authMiddleware, enrollmentRoutes);
-app.use('/api/payments', requireAuth(), authMiddleware, paymentRoutes);
-app.use('/api/donation', donationRoutes);
+app.use('/api', appRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

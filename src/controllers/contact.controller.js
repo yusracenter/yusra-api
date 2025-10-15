@@ -1,10 +1,7 @@
 import { UserRole, UserStatus } from '../helpers/enum.js';
-import qrCodeModel from '../models/qr-code.model.js';
 import userModel from '../models/user.model.js';
 import { getUser } from '../utils/auth.js';
 import catchAsync from '../utils/catchAsync.js';
-import enrollmentModel from '../models/enrollment.model.js';
-import { stripe } from '../utils/stripe.js';
 
 export const getContacts = catchAsync(async (req, res) => {
 	const user = await getUser(req);
@@ -24,7 +21,7 @@ export const createContact = catchAsync(async (req, res) => {
 	const user = await getUser(req);
 	const data = { role: UserRole.CONTACT, user: user._id, ...req.body };
 	const createdUser = await userModel.create(data);
-	return res.status(201).json({ user: createdUser });
+	return res.status(201).json({ message: 'Contact created successfully' });
 });
 
 export const updateContact = catchAsync(async (req, res) => {
@@ -32,7 +29,7 @@ export const updateContact = catchAsync(async (req, res) => {
 	const data = req.body;
 
 	const updatedUser = await userModel.findByIdAndUpdate(id, data, { new: true });
-	return res.status(200).json({ user: updatedUser });
+	return res.status(200).json({ message: 'Contact updated successfully' });
 });
 
 export const deleteContact = catchAsync(async (req, res) => {
@@ -40,10 +37,10 @@ export const deleteContact = catchAsync(async (req, res) => {
 
 	const user = await userModel.findById(id);
 	if (!user) {
-		return res.status(404).json({ message: 'Contact not found' });
+		return res.status(404).json('Contact not found');
 	}
 
 	await userModel.findByIdAndUpdate(user._id, { status: UserStatus.INACTIVE });
 
-	return res.status(200).json({ message: 'Contact deleted successfully', id: user._id });
+	return res.status(200).json({ message: 'Contact deleted successfully' });
 });

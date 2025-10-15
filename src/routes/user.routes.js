@@ -9,9 +9,11 @@ import {
 	updatePhoneSchema,
 	uploadedFileSchema,
 } from '../utils/validation.js';
-import upload from '../middlewares/upload.middleware.js';
+import { upload } from '../middlewares/upload.middleware.js';
 
 const router = express.Router();
+
+router.get('/me', userController.getCurrentUser);
 
 router.put(
 	'/profile-image',
