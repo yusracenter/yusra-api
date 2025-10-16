@@ -10,8 +10,10 @@ import paymentRoutes from './payment.routes.js';
 import donationRoutes from './donation.routes.js';
 import collaborationRoutes from './collaboration.routes.js';
 import courseRoutes from './course.routes.js';
+import adminRoutes from './admin.routes.js';
 
 import authMiddleware from '../middlewares/auth.middleware.js';
+import adminMiddleware from '../middlewares/admin.middleware.js';
 
 const router = express.Router();
 
@@ -24,5 +26,7 @@ router.use('/payments', requireAuth(), authMiddleware, paymentRoutes);
 router.use('/collaborations', requireAuth(), authMiddleware, collaborationRoutes);
 router.use('/online-courses', requireAuth(), authMiddleware, courseRoutes);
 router.use('/donation', donationRoutes);
+
+router.use('/admin', requireAuth(), adminMiddleware, adminRoutes);
 
 export default router;

@@ -10,7 +10,7 @@ router.post(
 		const { amount } = req.body;
 
 		if (!amount || isNaN(amount) || amount <= 0) {
-			return res.status(400).json({ message: 'Invalid donation amount' });
+			return res.status(400).json('Invalid donation amount');
 		}
 
 		const donation = await stripe.checkout.sessions.create({

@@ -175,13 +175,9 @@ export const deleteKid = catchAsync(async (req, res) => {
 	}
 
 	const enrollment = await enrollmentModel.find({ kid: user._id, status: 'active' });
-	const subsIds = enrollment.map(sub => sub.subscriptionId);
 
-	for (const subId of subsIds) {
-		const sub = await stripe.subscriptions.retrieve(subId);
-		if (sub && ['active', 'trialing'].includes(sub.status)) {
-			return res.status(400).json('Cannot delete kid with active subscriptions');
-		}
+	if (enrollment.length > 0) {
+		return res.status(400).json('Cannot delete kid with active subscriptions');
 	}
 
 	await qrCodeModel.findByIdAndDelete(user.qrCodeModel);

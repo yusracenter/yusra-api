@@ -14,6 +14,8 @@ const ProgramSchema = new mongoose.Schema(
 		priceId: String,
 		productId: String,
 
+		active: { type: Boolean, default: true },
+
 		enrollments: { type: Number, default: 0, min: 0 },
 	},
 	{ timestamps: true }

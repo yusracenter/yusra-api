@@ -1,3 +1,5 @@
+import { formatInTimeZone } from 'date-fns-tz';
+
 export function calcAge(birthdayISO, onDate = new Date(), graceMonths = 0) {
 	const b = new Date(birthdayISO);
 	if (Number.isNaN(b.getTime())) return NaN;
@@ -63,4 +65,8 @@ export function getDuration(lessons) {
 	const minutesDisplay = minutes > 0 ? `${minutes} min${minutes > 1 ? 's' : ''}` : '';
 
 	return `${hoursDisplay}${hours > 0 && minutes > 0 ? ' ' : ''}${minutesDisplay}`;
+}
+
+export function getDateKey(d = new Date()) {
+	return formatInTimeZone(d, 'UTC', 'MM-dd-yyyy');
 }
