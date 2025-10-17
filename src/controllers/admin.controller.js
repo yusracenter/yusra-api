@@ -10,6 +10,8 @@ import qrCodeModel from '../models/qr-code.model.js';
 import { getDateKey } from '../utils/index.js';
 import lessonModel from '../models/lesson.model.js';
 import purchaseModel from '../models/purchase.model.js';
+import { DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { s3, BUCKET } from '../utils/s3.js';
 
 export const getAllPrograms = catchAsync(async (req, res) => {
 	const { type } = req.query;
@@ -523,6 +525,32 @@ export const createCourseLesson = catchAsync(async (req, res) => {
 
 	return res.status(201).json({ message: 'Lesson created successfully' });
 });
+export const uploadCourseThumbnail = catchAsync(async (req, res) => {
+	if (!req.file) {
+		return res.status(400).json('No file uploaded');
+	}
+
+	const file = req.file;
+	const fileExt = file.originalname.split('.').pop();
+	const fileName = `${crypto.randomUUID()}.${fileExt}`;
+
+	const uploadParams = {
+		Bucket: BUCKET,
+		Key: `uploads/${fileName}`,
+		Body: file.buffer,
+		ContentType: file.mimetype,
+	};
+
+	await s3.send(new PutObjectCommand(uploadParams));
+
+	const fileUrl = `https://${BUCKET}.s3.${process.env.STORAGE_AWS_REGION}.amazonaws.com/uploads/${fileName}`;
+
+	console.log('fileUrl', fileUrl);
+
+	res
+		.status(200)
+		.json({ message: '✅ File uploaded successfully!', url: fileUrl, key: `uploads/${fileName}` });
+});
 
 export const updateProgram = catchAsync(async (req, res) => {
 	const parsedInput = req.body;
@@ -799,4 +827,13 @@ export const deleteCourseLesson = catchAsync(async (req, res) => {
 	await lessonModel.findByIdAndDelete(id);
 
 	return res.status(200).json({ message: 'Lesson deleted successfully' });
+});
+export const deleteCourseThumbnail = catchAsync(async (req, res) => {
+	const { key } = req.query;
+
+	if (!key) return res.status(400).json('Key is required');
+
+	await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+
+	res.status(200).json({ message: '✅ File deleted successfully', key });
 });

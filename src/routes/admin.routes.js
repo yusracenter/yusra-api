@@ -1,5 +1,6 @@
 import express from 'express';
 import * as adminController from '../controllers/admin.controller.js';
+import { upload } from '../middlewares/upload.middleware.js';
 
 const router = express.Router();
 
@@ -30,11 +31,13 @@ router.put('/course/:id', adminController.updateCourse);
 router.put('/course/lesson/:id', adminController.updateCourseLesson);
 router.put('/course/purchase/access', adminController.grantCourseAccess);
 router.put('/course/review/:id', adminController.updateCourseReview);
+router.put('/thumbnail', upload.single('file'), adminController.uploadCourseThumbnail);
 
 router.delete('/programs/:id', adminController.deleteProgram);
 router.delete('/program/enrollment/:id', adminController.deleteEnrollment);
 router.delete('/user/:id', adminController.deleteUser);
 router.delete('/course/:id', adminController.deleteCourse);
 router.delete('/course/lesson/:id', adminController.deleteCourseLesson);
+router.delete('/course/thumbnail', adminController.deleteCourseThumbnail);
 
 export default router;
