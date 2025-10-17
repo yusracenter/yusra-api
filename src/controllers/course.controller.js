@@ -9,6 +9,7 @@ import { UserRole, UserStatus } from '../helpers/enum.js';
 import enrollmentModel from '../models/enrollment.model.js';
 import reviewModel from '../models/review.model.js';
 import noteModel from '../models/note.model.js';
+import { s3, BUCKET, getPresignedGetUrl } from '../utils/s3.js';
 
 export const getCourses = catchAsync(async (req, res) => {
 	const user = req.user;
@@ -38,7 +39,6 @@ export const getCourses = catchAsync(async (req, res) => {
 
 	return res.status(200).json({ courses: coursesWithProgress });
 });
-
 export const getCourseBySlug = catchAsync(async (req, res) => {
 	const { slug } = req.params;
 	const user = req.user;
@@ -64,7 +64,6 @@ export const getCourseBySlug = catchAsync(async (req, res) => {
 
 	return res.status(200).json({ course: data });
 });
-
 export const getLessonsByCourseId = catchAsync(async (req, res) => {
 	const { courseId } = req.params;
 	const lessons = await lessonModel.find({ course: courseId }).sort({
@@ -72,7 +71,6 @@ export const getLessonsByCourseId = catchAsync(async (req, res) => {
 	});
 	return res.status(200).json({ lessons });
 });
-
 export const getLessonDashboard = catchAsync(async (req, res) => {
 	const user = req.user;
 	const { slug } = req.params;
@@ -94,14 +92,12 @@ export const getLessonDashboard = catchAsync(async (req, res) => {
 
 	res.json({ course, progress: +progress.toFixed(0), lessons: lessonsWithProgress });
 });
-
 export const getLesson = catchAsync(async (req, res) => {
 	const { id } = req.params;
 	const lesson = await lessonModel.findById(id);
 	if (!lesson) return res.json({ failure: 'Lesson not found' });
 	res.json({ lesson });
 });
-
 export const getNotes = catchAsync(async (req, res) => {
 	const user = req.user;
 	const { id } = req.params;
@@ -109,7 +105,6 @@ export const getNotes = catchAsync(async (req, res) => {
 	const notes = await noteModel.find({ user: user._id, lesson: id });
 	res.json({ notes });
 });
-
 export const getReview = catchAsync(async (req, res) => {
 	const user = req.user;
 	const { slug } = req.params;
@@ -123,7 +118,6 @@ export const getReview = catchAsync(async (req, res) => {
 
 	res.json({ review: review || null });
 });
-
 export const getReviews = catchAsync(async (req, res) => {
 	const { slug } = req.params;
 	const limit = Number(req.query.limit) || 10;
@@ -148,7 +142,6 @@ export const getReviews = catchAsync(async (req, res) => {
 		reviewsCount: allReviews.length,
 	});
 });
-
 export const checkAccessToCourse = catchAsync(async (req, res) => {
 	const user = req.user;
 	const { slug } = req.params;
@@ -166,7 +159,6 @@ export const checkAccessToCourse = catchAsync(async (req, res) => {
 
 	res.json({ message: 'Access granted' });
 });
-
 export const getLessonData = catchAsync(async (req, res) => {
 	const user = req.user;
 	const { slug } = req.params;
@@ -195,6 +187,17 @@ export const getLessonData = catchAsync(async (req, res) => {
 		.sort({ updatedAt: -1 });
 
 	res.json({ lessonId: lastProgress ? lastProgress.lesson : lessons[0]._id });
+});
+export const getS3PresignedUrl = catchAsync(async (req, res) => {
+	const key = req.query.key;
+
+	if (!key) {
+		return res.status(400).json({ error: 'missing' });
+	}
+
+	const signedUrl = await getPresignedGetUrl(key);
+
+	return res.json({ url: signedUrl });
 });
 
 export const purchaseFreeCourse = catchAsync(async (req, res) => {
@@ -226,7 +229,6 @@ export const purchaseFreeCourse = catchAsync(async (req, res) => {
 
 	return res.json({ message: 'Course purchased successfully' });
 });
-
 export const createNote = catchAsync(async (req, res) => {
 	const user = req.user;
 	const { lessonId, note } = req.body;
@@ -234,7 +236,6 @@ export const createNote = catchAsync(async (req, res) => {
 	await noteModel.create({ user: user._id, lesson: lessonId, note });
 	res.json({ message: 'Note added successfully' });
 });
-
 export const createReview = catchAsync(async (req, res) => {
 	const user = req.user;
 	const { comment, rating, slug } = req.body;
@@ -251,7 +252,6 @@ export const createReview = catchAsync(async (req, res) => {
 	await reviewModel.create({ user: user._id, course: course._id, comment, rating });
 	res.json({ message: 'Review created successfully' });
 });
-
 export const nextCourseLesson = catchAsync(async (req, res) => {
 	const user = req.user;
 	const { lessonId, slug } = req.body;
@@ -318,7 +318,6 @@ export const deleteNote = catchAsync(async (req, res) => {
 	await noteModel.findByIdAndDelete(id);
 	res.json({ message: 'Note deleted successfully' });
 });
-
 export const resetProgress = catchAsync(async (req, res) => {
 	const user = req.user;
 	const { id } = req.params;

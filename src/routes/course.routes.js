@@ -13,6 +13,7 @@ router.get('/courses/:slug/data', courseController.getLessonData);
 router.get('/review/:slug', courseController.getReview);
 router.get('/courses/:slug/reviews', courseController.getReviews);
 router.get('/courses/:slug/check-access', courseController.checkAccessToCourse);
+router.get('/s3/get-url', courseController.getS3PresignedUrl);
 
 router.post('/courses/:id/enroll/free', courseController.purchaseFreeCourse);
 router.post('/lessons/notes', courseController.createNote);
