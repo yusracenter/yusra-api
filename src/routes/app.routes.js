@@ -26,6 +26,7 @@ router.use('/payments', requireAuth(), authMiddleware, paymentRoutes);
 router.use('/collaborations', requireAuth(), authMiddleware, collaborationRoutes);
 router.use('/online-courses', requireAuth(), authMiddleware, courseRoutes);
 router.use('/donation', donationRoutes);
+router.use('/health', (req, res) => res.send('OK'));
 
 router.use('/admin', requireAuth(), adminMiddleware, adminRoutes);
 
