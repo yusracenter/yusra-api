@@ -1,10 +1,9 @@
 import { UserRole, UserStatus } from '../helpers/enum.js';
 import userModel from '../models/user.model.js';
-import { getUser } from '../utils/auth.js';
 import catchAsync from '../utils/catchAsync.js';
 
 export const getContacts = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 
 	const contacts = await userModel
 		.find({
@@ -18,7 +17,7 @@ export const getContacts = catchAsync(async (req, res) => {
 });
 
 export const createContact = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const data = { role: UserRole.CONTACT, user: user._id, ...req.body };
 	const createdUser = await userModel.create(data);
 	return res.status(201).json({ message: 'Contact created successfully' });

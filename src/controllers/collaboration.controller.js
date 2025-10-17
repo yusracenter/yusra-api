@@ -2,13 +2,12 @@ import { UserRole, UserStatus } from '../helpers/enum.js';
 import enrollmentModel from '../models/enrollment.model.js';
 import programModel from '../models/program.model.js';
 import userModel from '../models/user.model.js';
-import { getUser } from '../utils/auth.js';
 import catchAsync from '../utils/catchAsync.js';
 import { attachPaymentMethod, getCustomer } from '../utils/customer.js';
 import { stripe } from '../utils/stripe.js';
 
 export const getCollaborationStatus = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 
 	const collaboration = await programModel.find({ type: 'All', active: true });
 
@@ -40,7 +39,7 @@ export const getCollaborationStatus = catchAsync(async (req, res) => {
 
 export const getKidsByProgram = catchAsync(async (req, res) => {
 	const { programId } = req.params;
-	const user = await getUser(req);
+	const user = req.user;
 
 	const kids = await userModel.find({
 		parent: user._id,
@@ -64,7 +63,7 @@ export const getKidsByProgram = catchAsync(async (req, res) => {
 
 export const meIsEnrolled = catchAsync(async (req, res) => {
 	const { programId } = req.params;
-	const user = await getUser(req);
+	const user = req.user;
 	const enrollments = await enrollmentModel
 		.find({ kid: user._id, program: programId })
 		.select('_id');
@@ -74,7 +73,7 @@ export const meIsEnrolled = catchAsync(async (req, res) => {
 
 export const getCollaborationById = catchAsync(async (req, res) => {
 	const { programId } = req.params;
-	const user = await getUser(req);
+	const user = req.user;
 
 	const program = await programModel.findById(programId);
 	if (!program) {
@@ -112,7 +111,7 @@ export const getCollaborationById = catchAsync(async (req, res) => {
 export const createSubscription = catchAsync(async (req, res) => {
 	const { programId } = req.params;
 	const { userId, pmId, save, coupon } = req.body;
-	const user = await getUser(req);
+	const user = req.user;
 
 	const program = await programModel.findById(programId);
 	if (!program) {
@@ -164,7 +163,7 @@ export const createSubscription = catchAsync(async (req, res) => {
 export const confirmSubscription = catchAsync(async (req, res) => {
 	const { programId } = req.params;
 	const { subId, userId } = req.body;
-	const user = await getUser(req);
+	const user = req.user;
 
 	const subs = await stripe.subscriptions.retrieve(subId);
 	const program = await programModel.findById(programId);

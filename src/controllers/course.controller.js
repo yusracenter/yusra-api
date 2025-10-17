@@ -1,5 +1,4 @@
 import catchAsync from '../utils/catchAsync.js';
-import { getUser } from '../utils/auth.js';
 import courseModel from '../models/course.model.js';
 import userProgressModel from '../models/user-progress.model.js';
 import lessonModel from '../models/lesson.model.js';
@@ -12,7 +11,7 @@ import reviewModel from '../models/review.model.js';
 import noteModel from '../models/note.model.js';
 
 export const getCourses = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const courses = await courseModel.find({ isPublished: true });
 
 	const coursesWithProgress = await Promise.all(
@@ -42,7 +41,7 @@ export const getCourses = catchAsync(async (req, res) => {
 
 export const getCourseBySlug = catchAsync(async (req, res) => {
 	const { slug } = req.params;
-	const user = await getUser(req);
+	const user = req.user;
 
 	const courseData = await courseModel.findOne({ slug: slug, isPublished: true }).lean();
 	const lessons = await lessonModel.find({ course: courseData._id });
@@ -75,7 +74,7 @@ export const getLessonsByCourseId = catchAsync(async (req, res) => {
 });
 
 export const getLessonDashboard = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const { slug } = req.params;
 
 	const course = await courseModel.findOne({ slug, isPublished: true }).select('_id title');
@@ -104,7 +103,7 @@ export const getLesson = catchAsync(async (req, res) => {
 });
 
 export const getNotes = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const { id } = req.params;
 
 	const notes = await noteModel.find({ user: user._id, lesson: id });
@@ -112,7 +111,7 @@ export const getNotes = catchAsync(async (req, res) => {
 });
 
 export const getReview = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const { slug } = req.params;
 
 	const course = await courseModel.findOne({ slug }).select('_id');
@@ -151,7 +150,7 @@ export const getReviews = catchAsync(async (req, res) => {
 });
 
 export const checkAccessToCourse = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const { slug } = req.params;
 
 	const course = await courseModel.findOne({ slug }).select('_id');
@@ -169,7 +168,7 @@ export const checkAccessToCourse = catchAsync(async (req, res) => {
 });
 
 export const getLessonData = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const { slug } = req.params;
 
 	const course = await courseModel.findOne({ slug }).select('_id');
@@ -199,7 +198,7 @@ export const getLessonData = catchAsync(async (req, res) => {
 });
 
 export const purchaseFreeCourse = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const { id } = req.params;
 
 	const course = await courseModel.findOne({ _id: id, isPublished: true });
@@ -229,7 +228,7 @@ export const purchaseFreeCourse = catchAsync(async (req, res) => {
 });
 
 export const createNote = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const { lessonId, note } = req.body;
 
 	await noteModel.create({ user: user._id, lesson: lessonId, note });
@@ -237,7 +236,7 @@ export const createNote = catchAsync(async (req, res) => {
 });
 
 export const createReview = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const { comment, rating, slug } = req.body;
 
 	const course = await courseModel.findOne({ slug }).select('_id');
@@ -254,7 +253,7 @@ export const createReview = catchAsync(async (req, res) => {
 });
 
 export const nextCourseLesson = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const { lessonId, slug } = req.body;
 
 	const course = await courseModel.findOne({ slug }).select('_id');
@@ -314,14 +313,14 @@ export const updatePurchaseAccess = catchAsync(async (req, res) => {
 
 export const deleteNote = catchAsync(async (req, res) => {
 	const { id } = req.params;
-	await getUser(req);
+	req.user;
 
 	await noteModel.findByIdAndDelete(id);
 	res.json({ message: 'Note deleted successfully' });
 });
 
 export const resetProgress = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const { id } = req.params;
 
 	const course = await courseModel.findById(id).select('_id slug');

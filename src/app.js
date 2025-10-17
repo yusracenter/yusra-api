@@ -4,7 +4,8 @@ import cors from 'cors';
 import { clerkMiddleware } from '@clerk/express';
 import cookieParser from 'cookie-parser';
 
-import { clerkWebhookHandler } from './controllers/clerk.controller.js';
+// Webhook Controller
+import { clerkWebhookHandler, stripeWebhookHandler } from './controllers/webhook.controller.js';
 
 // Middlewares
 import notFound from './middlewares/notFound.middleware.js';
@@ -18,6 +19,7 @@ const app = express();
 app.use(helmet());
 
 app.post('/webhooks/clerk', express.raw({ type: 'application/json' }), clerkWebhookHandler);
+app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(cookieParser());

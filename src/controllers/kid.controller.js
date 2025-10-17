@@ -1,16 +1,14 @@
 import { UserRole, UserStatus } from '../helpers/enum.js';
 import qrCodeModel from '../models/qr-code.model.js';
 import userModel from '../models/user.model.js';
-import { getUser } from '../utils/auth.js';
 import catchAsync from '../utils/catchAsync.js';
 import enrollmentModel from '../models/enrollment.model.js';
-import { stripe } from '../utils/stripe.js';
 import programModel from '../models/program.model.js';
 import { monthKeysUS } from '../utils/index.js';
 import attendanceModel from '../models/attendance.model.js';
 
 export const getKids = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 
 	const kids = await userModel
 		.find({
@@ -75,7 +73,7 @@ export const getKidsAttendance = catchAsync(async (req, res) => {
 });
 
 export const createKid = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const data = { role: UserRole.KID, parent: user._id, ...req.body };
 	await userModel.create(data);
 	return res.status(201).json({ message: 'Kid created successfully' });

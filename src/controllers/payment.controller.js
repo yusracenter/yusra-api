@@ -1,10 +1,9 @@
-import { getUser } from '../utils/auth.js';
 import catchAsync from '../utils/catchAsync.js';
 import { getCustomer } from '../utils/customer.js';
 import { stripe } from '../utils/stripe.js';
 
 export const getPaymentMethods = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
 		return res.status(404).json('User not found');
 	}
@@ -31,7 +30,7 @@ export const getPaymentMethods = catchAsync(async (req, res) => {
 });
 
 export const getPaymentHistory = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
 		return res.status(404).json('User not found');
 	}
@@ -79,7 +78,7 @@ export const getPaymentHistory = catchAsync(async (req, res) => {
 });
 
 export const getPaymentIntent = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
 		return res.status(404).json('User not found');
 	}
@@ -103,7 +102,7 @@ export const getPaymentIntent = catchAsync(async (req, res) => {
 });
 
 export const addPaymentMethod = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
 		return res.status(404).json('User not found');
 	}
@@ -141,7 +140,7 @@ export const addPaymentMethod = catchAsync(async (req, res) => {
 });
 
 export const donate = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
 		return res.status(404).json('User not found');
 	}
@@ -217,7 +216,7 @@ export const validateCoupon = catchAsync(async (req, res) => {
 });
 
 export const removePaymentMethod = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
 		return res.status(404).json({ error: 'User not found' });
 	}

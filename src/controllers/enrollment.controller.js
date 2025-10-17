@@ -1,7 +1,6 @@
-import { UserRole, UserStatus } from '../helpers/enum.js';
+import { UserStatus } from '../helpers/enum.js';
 import enrollmentModel from '../models/enrollment.model.js';
 import userModel from '../models/user.model.js';
-import { getUser } from '../utils/auth.js';
 import catchAsync from '../utils/catchAsync.js';
 import programModel from '../models/program.model.js';
 import { stripe } from '../utils/stripe.js';
@@ -9,7 +8,7 @@ import { getGender } from '../utils/index.js';
 import { attachPaymentMethod, getCustomer } from '../utils/customer.js';
 
 export const getEnrollmentProgram = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 
 	if (!user) {
 		return res.status(404).json('User not found');
@@ -76,7 +75,7 @@ export const getProgramById = catchAsync(async (req, res) => {
 export const createSubscription = catchAsync(async (req, res) => {
 	const { programId, paymentMethodId, kidId, coupon } = req.body;
 
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
 		return res.status(404).json('User not found');
 	}
@@ -152,7 +151,7 @@ export const enrollProgram = catchAsync(async (req, res) => {
 		paymentMethod,
 	} = req.body;
 
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
 		return res.status(404).json('User not found');
 	}
@@ -181,7 +180,7 @@ export const enrollProgram = catchAsync(async (req, res) => {
 export const createFreeSubscription = catchAsync(async (req, res) => {
 	const { kidId, programId, couponId } = req.body;
 
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
 		return res.status(404).json('User not found');
 	}
@@ -257,7 +256,7 @@ export const renewSubscription = catchAsync(async (req, res) => {
 });
 
 export const toggleAutoRenew = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
 		return res.status(404).json('User not found');
 	}
@@ -281,7 +280,7 @@ export const toggleAutoRenew = catchAsync(async (req, res) => {
 });
 
 export const updatePaymentMethod = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
 		return res.status(404).json('User not found');
 	}

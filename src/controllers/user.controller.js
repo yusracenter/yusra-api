@@ -1,17 +1,16 @@
 import { clerkClient } from '@clerk/express';
-import { getUser } from '../utils/auth.js';
 import catchAsync from '../utils/catchAsync.js';
 import userModel from '../models/user.model.js';
 
 export const getCurrentUser = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) return res.status(404).json('User not found');
 
 	return res.status(200).json({ user });
 });
 
 export const updateProfileImage = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) return res.status(404).json('User not found');
 	if (!req.file) return res.status(400).json('No file uploaded');
 
@@ -32,7 +31,7 @@ export const updateProfileImage = catchAsync(async (req, res) => {
 
 export const updateFullName = catchAsync(async (req, res) => {
 	const { firstName, lastName } = req.body;
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) return res.status(404).json('User not found');
 
 	await clerkClient.users.updateUser(user.clerkId, { firstName, lastName });
@@ -41,7 +40,7 @@ export const updateFullName = catchAsync(async (req, res) => {
 
 export const updateAddress = catchAsync(async (req, res) => {
 	const { address } = req.body;
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) return res.status(404).json({ message: 'User not found' });
 
 	const updated = await userModel.findByIdAndUpdate(user._id, { address }, { new: true });
@@ -51,7 +50,7 @@ export const updateAddress = catchAsync(async (req, res) => {
 });
 
 export const deleteProfileImage = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) return res.status(404).json('User not found');
 
 	await clerkClient.users.deleteUserProfileImage(user.clerkId);
@@ -60,7 +59,7 @@ export const deleteProfileImage = catchAsync(async (req, res) => {
 
 export const updatePhone = catchAsync(async (req, res) => {
 	const { phone } = req.body;
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) return res.status(404).json({ message: 'User not found' });
 
 	const updated = await userModel.findByIdAndUpdate(user._id, { phone }, { new: true });
@@ -71,7 +70,7 @@ export const updatePhone = catchAsync(async (req, res) => {
 
 export const completeProfile = catchAsync(async (req, res) => {
 	const { address, phone } = req.body;
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) return res.status(404).json('User not found');
 
 	const updated = await userModel.findByIdAndUpdate(
