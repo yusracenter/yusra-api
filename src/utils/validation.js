@@ -145,7 +145,7 @@ export const createSubSchema = z.object({
 	programId: z.string({ required_error: 'Program ID is required.' }),
 	paymentMethodId: z.string({ required_error: 'Payment Method ID is required.' }),
 	kidId: z.string({ required_error: 'Kid ID is required.' }),
-	coupon: z.object({ id: z.string().optional() }).optional(),
+	coupon: z.any().optional(),
 });
 
 export const enrollProgramSchema = z.object({
@@ -156,6 +156,10 @@ export const enrollProgramSchema = z.object({
 	subscriptionId: z.string({ required_error: 'Subscription ID is required.' }),
 	programPrice: z.string({ required_error: 'Program Price is required.' }),
 	paymentMethod: z.string({ required_error: 'Payment Method is required.' }),
+});
+
+export const subscriptionIdSchema = z.object({
+	subscriptionId: z.string({ required_error: 'Subscription ID is required.' }),
 });
 
 export const freeSubscriptionSchema = z.object({
@@ -217,4 +221,19 @@ export const updateQrCodeSchema = z
 
 export const qrCodeIdParamSchema = z.object({
 	id: z.string({ error: 'Kid ID is required' }),
+});
+
+export const programIdParamSchema = z.object({
+	programId: z.string({ error: 'Program ID is required' }),
+});
+
+export const createSubsCollabSchema = z.object({
+	userId: z.string({ required_error: 'User ID is required.' }),
+	pmId: z.string({ required_error: 'Payment Method ID is required.' }),
+	save: z.boolean({ required_error: 'Save is required.' }).optional(),
+	coupon: z.string().optional(),
+});
+export const confirmSubsCollabSchema = z.object({
+	subId: z.string({ required_error: 'Subscription ID is required.' }),
+	userId: z.string({ required_error: 'User ID is required.' }),
 });

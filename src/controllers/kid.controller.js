@@ -1,13 +1,14 @@
 import { UserRole, UserStatus } from '../helpers/enum.js';
 import qrCodeModel from '../models/qr-code.model.js';
 import userModel from '../models/user.model.js';
-import { getUser } from '../utils/auth.js';
 import catchAsync from '../utils/catchAsync.js';
 import enrollmentModel from '../models/enrollment.model.js';
-import { stripe } from '../utils/stripe.js';
+import programModel from '../models/program.model.js';
+import { monthKeysUS } from '../utils/index.js';
+import attendanceModel from '../models/attendance.model.js';
 
 export const getKids = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 
 	const kids = await userModel
 		.find({
@@ -25,11 +26,57 @@ export const getKids = catchAsync(async (req, res) => {
 	return res.status(200).json({ kids });
 });
 
+export const getKidsAttendance = catchAsync(async (req, res) => {
+	const { kidId } = req.params;
+	const { month } = req.query;
+
+	const kid = await userModel
+		.findById(kidId)
+		.select('firstName lastName program birthday gender')
+		.populate({
+			path: 'enrollments',
+			select: 'program',
+			model: enrollmentModel,
+			populate: { path: 'program', select: 'name', model: programModel },
+			options: { sort: { createdAt: -1 }, limit: 1 },
+		});
+
+	if (!kid?.enrollments) {
+		return res.status(404).json('Kid not found or has no enrollments');
+	}
+
+	if (!kid) {
+		return res.status(404).json('Kid not found');
+	}
+
+	const now = new Date();
+	const [yStr, mStr] = (
+		month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+	).split('-');
+	const year = Number(yStr);
+	const month0 = Number(mStr) - 1;
+
+	const keys = monthKeysUS(year, month0);
+
+	const rows = await attendanceModel
+		.find({ kid: kidId, dateKey: { $in: keys } })
+		.select('dateKey checkedInAt checkedOutAt')
+		.lean();
+
+	const records = rows.map(r => ({
+		dateKey: r.dateKey,
+		checkedInAt: r.checkedInAt ? new Date(r.checkedInAt).toISOString() : null,
+		checkedOutAt: r.checkedOutAt ? new Date(r.checkedOutAt).toISOString() : null,
+	}));
+
+	return res.status(200).json({ kid, records, year, month: month0 + 1 });
+});
+
 export const createKid = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	const data = { role: UserRole.KID, parent: user._id, ...req.body };
-	const createdUser = await userModel.create(data);
-	return res.status(201).json({ user: createdUser });
+	await userModel.create(data);
+	return res.status(201).json({ message: 'Kid created successfully' });
 });
 
 export const generateQRCode = catchAsync(async (req, res) => {
@@ -37,16 +84,16 @@ export const generateQRCode = catchAsync(async (req, res) => {
 
 	const kid = await userModel.findById(kidId);
 	if (!kid) {
-		return res.status(404).json({ message: 'Kid not found' });
+		return res.status(404).json('Kid not found');
 	}
 
 	if (!kid.enrollments) {
-		return res.status(400).json({ message: 'Kid has no enrollments' });
+		return res.status(400).json('Kid has no enrollments');
 	}
 
 	const existingQRCode = await qrCodeModel.findById(kid.qrCodeModel);
 	if (existingQRCode) {
-		return res.status(400).json({ message: 'QR Code already exists.' });
+		return res.status(400).json('QR Code already exists.');
 	}
 
 	kid.qrCode = value;
@@ -67,15 +114,17 @@ export const generateQRCode = catchAsync(async (req, res) => {
 	kid.qrCodeModel = createdQRCode._id;
 	await kid.save();
 
-	return res.status(201).json({ qrCode: createdQRCode });
+	return res
+		.status(201)
+		.json({ message: 'QR Code generated successfully', scanUrl, code: kid.qrCode });
 });
 
 export const updateKid = catchAsync(async (req, res) => {
 	const { id } = req.params;
 	const data = req.body;
 
-	const updatedUser = await userModel.findByIdAndUpdate(id, data, { new: true });
-	return res.status(200).json({ user: updatedUser });
+	await userModel.findByIdAndUpdate(id, data, { new: true });
+	return res.status(200).json({ message: 'Kid updated successfully' });
 });
 
 export const updateQRCode = catchAsync(async (req, res) => {
@@ -84,20 +133,18 @@ export const updateQRCode = catchAsync(async (req, res) => {
 
 	const kid = await userModel.findById(id);
 	if (!kid) {
-		return res.status(404).json({ message: 'Kid not found' });
+		return res.status(404).json('Kid not found');
 	}
 
 	if (!kid.qrCodeModel) {
-		return res.status(400).json({ message: 'Kid has no QR Code. Please generate one first.' });
+		return res.status(400).json('Kid has no QR Code. Please generate one first.');
 	}
 
 	const codeValue = data.value.toUpperCase();
 
 	const existingQRCode = await qrCodeModel.findOne({ code: codeValue });
 	if (existingQRCode) {
-		return res
-			.status(400)
-			.json({ message: 'QR Code value already exists. Please choose a different value.' });
+		return res.status(400).json('QR Code value already exists. Please choose a different value.');
 	}
 
 	const scanUrl = `${process.env.CLIENT_URL}/admin/static-scan?token=${codeValue}`;
@@ -114,7 +161,7 @@ export const updateQRCode = catchAsync(async (req, res) => {
 		{ new: true }
 	);
 
-	return res.status(200).json({ kid: updatedKid, qrCode: updatedQRCode });
+	return res.status(200).json({ message: 'QR Code updated successfully' });
 });
 
 export const deleteKid = catchAsync(async (req, res) => {
@@ -122,21 +169,17 @@ export const deleteKid = catchAsync(async (req, res) => {
 
 	const user = await userModel.findById(id);
 	if (!user) {
-		return res.status(404).json({ message: 'Kid not found' });
+		return res.status(404).json('Kid not found');
 	}
 
 	const enrollment = await enrollmentModel.find({ kid: user._id, status: 'active' });
-	const subsIds = enrollment.map(sub => sub.subscriptionId);
 
-	for (const subId of subsIds) {
-		const sub = await stripe.subscriptions.retrieve(subId);
-		if (sub && ['active', 'trialing'].includes(sub.status)) {
-			return res.status(400).json({ message: 'Cannot delete kid with active subscriptions' });
-		}
+	if (enrollment.length > 0) {
+		return res.status(400).json('Cannot delete kid with active subscriptions');
 	}
 
 	await qrCodeModel.findByIdAndDelete(user.qrCodeModel);
 	await userModel.findByIdAndUpdate(user._id, { status: UserStatus.INACTIVE });
 
-	return res.status(200).json({ message: 'Kid deleted successfully', id: user._id });
+	return res.status(200).json({ message: 'Kid deleted successfully' });
 });

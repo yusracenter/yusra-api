@@ -1,17 +1,16 @@
-import { getUser } from '../utils/auth.js';
 import catchAsync from '../utils/catchAsync.js';
 import { getCustomer } from '../utils/customer.js';
 import { stripe } from '../utils/stripe.js';
 
 export const getPaymentMethods = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
-		return res.status(404).json({ error: 'User not found' });
+		return res.status(404).json('User not found');
 	}
 
 	const customer = await getCustomer(user._id);
 	if (!customer) {
-		return res.status(404).json({ error: 'Customer not found' });
+		return res.status(404).json('Customer not found');
 	}
 
 	const paymentMethods = await stripe.paymentMethods.list({
@@ -31,14 +30,14 @@ export const getPaymentMethods = catchAsync(async (req, res) => {
 });
 
 export const getPaymentHistory = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
-		return res.status(404).json({ error: 'User not found' });
+		return res.status(404).json('User not found');
 	}
 
 	const customer = await getCustomer(user._id);
 	if (!customer) {
-		return res.status(404).json({ error: 'Customer not found' });
+		return res.status(404).json('Customer not found');
 	}
 
 	const invoices = await stripe.invoices.list({
@@ -79,14 +78,14 @@ export const getPaymentHistory = catchAsync(async (req, res) => {
 });
 
 export const getPaymentIntent = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
-		return res.status(404).json({ error: 'User not found' });
+		return res.status(404).json('User not found');
 	}
 
 	const customer = await getCustomer(user._id);
 	if (!customer) {
-		return res.status(404).json({ error: 'Customer not found' });
+		return res.status(404).json('Customer not found');
 	}
 
 	const { id } = req.params;
@@ -96,21 +95,21 @@ export const getPaymentIntent = catchAsync(async (req, res) => {
 	});
 
 	if (pi.customer !== customer.id) {
-		return res.status(400).json({ error: 'This payment intent does not belong to you.' });
+		return res.status(400).json('This payment intent does not belong to you.');
 	}
 
-	return res.status(200).json({ paymentIntent: pi });
+	return res.status(200).json({ pi });
 });
 
 export const addPaymentMethod = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
-		return res.status(404).json({ error: 'User not found' });
+		return res.status(404).json('User not found');
 	}
 
 	const customer = await getCustomer(user._id);
 	if (!customer) {
-		return res.status(404).json({ error: 'Customer not found' });
+		return res.status(404).json('Customer not found');
 	}
 
 	const { paymentMethodId } = req.body;
@@ -128,27 +127,27 @@ export const addPaymentMethod = catchAsync(async (req, res) => {
 	);
 
 	if (same) {
-		return res.status(400).json({ error: 'This card is already added.' });
+		return res.status(400).json('This card is already added.');
 	}
 
-	const newPm = await stripe.paymentMethods.attach(
+	await stripe.paymentMethods.attach(
 		paymentMethodId,
 		{ customer: customer.id },
 		{ idempotencyKey: `attach-${customer.id}-${paymentMethodId}` }
 	);
 
-	return res.status(200).json({ paymentMethod: newPm });
+	return res.status(200).json({ success: true, message: 'Payment method added successfully.' });
 });
 
 export const donate = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
-		return res.status(404).json({ error: 'User not found' });
+		return res.status(404).json('User not found');
 	}
 
 	const customer = await getCustomer(user._id);
 	if (!customer) {
-		return res.status(404).json({ error: 'Customer not found' });
+		return res.status(404).json('Customer not found');
 	}
 
 	const { amount, paymentMethodId, isSave, brand, last4 } = req.body;
@@ -166,15 +165,13 @@ export const donate = catchAsync(async (req, res) => {
 			pm => pm.card && incoming.card && pm.card.fingerprint === incoming.card.fingerprint
 		);
 
-		if (same) {
-			return res.status(400).json({ error: 'This card is already added.' });
+		if (!same) {
+			await stripe.paymentMethods.attach(
+				paymentMethodId,
+				{ customer: customer.id },
+				{ idempotencyKey: `attach-${customer.id}-${paymentMethodId}` }
+			);
 		}
-
-		await stripe.paymentMethods.attach(
-			paymentMethodId,
-			{ customer: customer.id },
-			{ idempotencyKey: `attach-${customer.id}-${paymentMethodId}` }
-		);
 	}
 
 	const pi = await stripe.paymentIntents.create({
@@ -200,7 +197,7 @@ export const validateCoupon = catchAsync(async (req, res) => {
 
 	const promo = list.data[0];
 	if (!promo) {
-		return res.status(404).json({ error: 'Coupon not found' });
+		return res.status(404).json('Coupon not found');
 	}
 
 	const coupon = promo.coupon;
@@ -219,21 +216,21 @@ export const validateCoupon = catchAsync(async (req, res) => {
 });
 
 export const removePaymentMethod = catchAsync(async (req, res) => {
-	const user = await getUser(req);
+	const user = req.user;
 	if (!user) {
 		return res.status(404).json({ error: 'User not found' });
 	}
 
 	const customer = await getCustomer(user._id);
 	if (!customer) {
-		return res.status(404).json({ error: 'Customer not found' });
+		return res.status(404).json('Customer not found');
 	}
 
 	const { id } = req.params;
 
 	const pm = await stripe.paymentMethods.retrieve(id);
 	if (pm.customer !== customer.id) {
-		return res.status(400).json({ error: 'This payment method does not belong to you.' });
+		return res.status(400).json('This payment method does not belong to you.');
 	}
 
 	const subs = await stripe.subscriptions.list({
@@ -245,9 +242,9 @@ export const removePaymentMethod = catchAsync(async (req, res) => {
 	const isUsed = subs.data.find(s => s.default_payment_method === id);
 
 	if (isUsed) {
-		return res.status(400).json({
-			error: 'This payment method is linked to an active subscription and cannot be removed.',
-		});
+		return res
+			.status(400)
+			.json('This payment method is linked to an active subscription and cannot be removed.');
 	}
 
 	await stripe.paymentMethods.detach(id);

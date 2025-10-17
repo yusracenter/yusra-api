@@ -15,10 +15,13 @@
 		"nodemon": "^3.1.10"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "^3.911.0",
+		"@aws-sdk/s3-request-presigner": "^3.911.0",
 		"@clerk/backend": "^2.12.1",
 		"@clerk/express": "^1.7.23",
 		"cookie-parser": "^1.4.7",
 		"cors": "^2.8.5",
+		"date-fns-tz": "^3.2.0",
 		"dotenv": "^17.2.1",
 		"express": "^5.1.0",
 		"helmet": "^8.1.0",

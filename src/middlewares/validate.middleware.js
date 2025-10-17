@@ -26,28 +26,15 @@ function validate(schemas = {}) {
 	};
 }
 
-export function validateUpload({ body, file } = {}) {
+export function validateUpload(opts) {
 	return (req, res, next) => {
 		try {
-			if (body) req.body = body.parse(req.body);
-			if (file) {
-				if (!req.file) {
-					return res.status(400).json({ errors: [{ path: 'file', message: 'File is required' }] });
-				}
-				file.parse(req.file);
-			}
+			opts.body.parse(req.body ?? {});
+			if (!req.file) throw new Error('No file uploaded');
+			opts.file.parse(req.file);
 			next();
-		} catch (err) {
-			if (err instanceof ZodError) {
-				return res.status(400).json({
-					errors: err.issues.map(i => ({
-						path: Array.isArray(i.path) ? i.path.join('.') : String(i.path || ''),
-						message: i.message,
-						code: i.code,
-					})),
-				});
-			}
-			next(err);
+		} catch (e) {
+			return res.status(400).json(e.message || 'INVALID_UPLOAD');
 		}
 	};
 }

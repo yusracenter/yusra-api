@@ -8,6 +8,8 @@ import {
 	enrollProgramSchema,
 	freeSubscriptionSchema,
 	idParamSchema,
+	paymentMethodSchema,
+	subscriptionIdSchema,
 } from '../utils/validation.js';
 
 const router = express.Router();
@@ -45,6 +47,11 @@ router.put(
 	'/toggle-auto-renew/:enrollmentId',
 	validate({ body: autoRenewSchema, params: enrollmentIdParamSchema }),
 	enrollmentController.toggleAutoRenew
+);
+router.put(
+	'/update-payment-method/:subscriptionId',
+	validate({ params: subscriptionIdSchema, body: paymentMethodSchema }),
+	enrollmentController.updatePaymentMethod
 );
 
 router.delete(
