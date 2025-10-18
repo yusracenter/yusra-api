@@ -10,8 +10,7 @@ import qrCodeModel from '../models/qr-code.model.js';
 import { getDateKey } from '../utils/index.js';
 import lessonModel from '../models/lesson.model.js';
 import purchaseModel from '../models/purchase.model.js';
-import { DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { s3, BUCKET } from '../utils/s3.js';
+import { deleteObject, readData, uploadObject, writeData } from '../utils/s3.js';
 
 export const getAllPrograms = catchAsync(async (req, res) => {
 	const { type } = req.query;
@@ -315,6 +314,14 @@ export const getCoursePurchases = catchAsync(async (req, res) => {
 
 	return res.status(200).json({ purchases, isNext, total });
 });
+export const getAllCommunityPosts = catchAsync(async (req, res) => {
+	const data = await readData();
+	return res.status(200).json({ communities: data.communities });
+});
+export const getAllSlides = catchAsync(async (req, res) => {
+	const data = await readData();
+	return res.status(200).json({ slides: data.slides });
+});
 
 export const createProgram = catchAsync(async (req, res) => {
 	const parsedInput = req.body;
@@ -525,31 +532,31 @@ export const createCourseLesson = catchAsync(async (req, res) => {
 
 	return res.status(201).json({ message: 'Lesson created successfully' });
 });
-export const uploadCourseThumbnail = catchAsync(async (req, res) => {
-	if (!req.file) {
-		return res.status(400).json('No file uploaded');
-	}
+export const createCommunityPost = catchAsync(async (req, res) => {
+	const { url, key } = req.body;
 
-	const file = req.file;
-	const fileExt = file.originalname.split('.').pop();
-	const fileName = `${crypto.randomUUID()}.${fileExt}`;
+	const data = await readData();
+	data.communities.push({ name: key, url, createdAt: new Date() });
+	await writeData(data);
 
-	const uploadParams = {
-		Bucket: BUCKET,
-		Key: `uploads/${fileName}`,
-		Body: file.buffer,
-		ContentType: file.mimetype,
-	};
+	return res.status(201).json({ message: 'Success', data: data.communities });
+});
+export const createSlide = catchAsync(async (req, res) => {
+	const { url, key, idx } = req.body;
 
-	await s3.send(new PutObjectCommand(uploadParams));
+	if (!Number.isInteger(idx)) return res.status(400).json('Invalid index');
 
-	const fileUrl = `https://${BUCKET}.s3.${process.env.STORAGE_AWS_REGION}.amazonaws.com/uploads/${fileName}`;
+	const data = await readData();
+	if (!data.slides[idx]) return res.status(404).json('Slide not found');
 
-	console.log('fileUrl', fileUrl);
+	data.slides[idx].images.push({
+		src: url,
+		alt: `${data.slides[idx].heading}-${data.slides[idx].images.length + 1}`,
+		key: key,
+	});
 
-	res
-		.status(200)
-		.json({ message: '✅ File uploaded successfully!', url: fileUrl, key: `uploads/${fileName}` });
+	await writeData(data);
+	res.json({ message: 'Success', data: data.slides });
 });
 
 export const updateProgram = catchAsync(async (req, res) => {
@@ -582,7 +589,7 @@ export const updateProgram = catchAsync(async (req, res) => {
 		program.priceId = price.id;
 	}
 
-	const updatedProgram = await Program.findByIdAndUpdate(parsedInput.id, {
+	await programModel.findByIdAndUpdate(parsedInput.id, {
 		...parsedInput,
 		priceId: program.priceId,
 	});
@@ -736,6 +743,17 @@ export const updateCourseReview = catchAsync(async (req, res) => {
 
 	return res.status(200).json({ message: 'Review updated successfully' });
 });
+export const uploadCourseThumbnail = catchAsync(async (req, res) => {
+	if (!req.file) {
+		return res.status(400).json('No file uploaded');
+	}
+	const file = req.file;
+	const { fileName, fileUrl } = await uploadObject(file);
+
+	res
+		.status(200)
+		.json({ message: 'File uploaded successfully!', url: fileUrl, key: `uploads/${fileName}` });
+});
 
 export const deleteProgram = catchAsync(async (req, res) => {
 	const { id } = req.params;
@@ -832,8 +850,42 @@ export const deleteCourseThumbnail = catchAsync(async (req, res) => {
 	const { key } = req.query;
 
 	if (!key) return res.status(400).json('Key is required');
+	const { message } = await deleteObject(key);
 
-	await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+	res.status(200).json({ message, key });
+});
+export const deleteCommunityPost = catchAsync(async (req, res) => {
+	const { name } = req.params;
 
-	res.status(200).json({ message: '✅ File deleted successfully', key });
+	await deleteObject(name);
+
+	const data = await readData();
+	const initialLength = data.communities.length;
+	data.communities = data.communities.filter(c => c.name !== name);
+
+	if (data.communities.length === initialLength) {
+		return res.status(404).json('Community post not found');
+	}
+
+	await writeData(data);
+
+	return res.status(200).json({ message: 'Success', data: data.communities });
+});
+export const deleteSlide = catchAsync(async (req, res) => {
+	const i = Number(req.query.index);
+	const name = decodeURIComponent(req.params.name);
+
+	if (!Number.isInteger(i) || !name) return res.status(400).json('Invalid parameters');
+
+	const data = await readData();
+	const slide = data.slides[i];
+	if (!slide) return res.status(404).json('Slide not found');
+
+	const image = slide.images.find(img => img.src.includes(name));
+	if (!image) return res.status(404).json('Image not found');
+
+	slide.images = slide.images.filter(img => img.src !== image.src);
+	await writeData(data);
+
+	res.json({ message: 'Success', data: data.slides });
 });

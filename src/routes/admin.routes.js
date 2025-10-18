@@ -14,6 +14,8 @@ router.get('/courses', adminController.getAllCourses);
 router.get('/course/:id', adminController.getCourseById);
 router.get('/course/lessons/:id', adminController.getCourseLessons);
 router.get('/course/purchases/:id', adminController.getCoursePurchases);
+router.get('/community', adminController.getAllCommunityPosts);
+router.get('/slides', adminController.getAllSlides);
 
 router.post('/programs', adminController.createProgram);
 router.post('/program/transfer', adminController.transferProgram);
@@ -21,6 +23,8 @@ router.post('/attendance/users', adminController.atendanceUsers);
 router.post('/attendance/scan', adminController.toggleAttendance);
 router.post('/course', adminController.createCourse);
 router.post('/course/lesson', adminController.createCourseLesson);
+router.post('/community', adminController.createCommunityPost);
+router.post('/slides', adminController.createSlide);
 
 router.put('/programs', adminController.updateProgram);
 router.put('/program/enrollment/:id/renew-off', adminController.renewEnrollmentOff);
@@ -38,6 +42,8 @@ router.delete('/program/enrollment/:id', adminController.deleteEnrollment);
 router.delete('/user/:id', adminController.deleteUser);
 router.delete('/course/:id', adminController.deleteCourse);
 router.delete('/course/lesson/:id', adminController.deleteCourseLesson);
-router.delete('/course/thumbnail', adminController.deleteCourseThumbnail);
+router.delete('/thumbnail', adminController.deleteCourseThumbnail);
+router.delete('/community/:name', adminController.deleteCommunityPost);
+router.delete('/slides/:name', adminController.deleteSlide);
 
 export default router;
