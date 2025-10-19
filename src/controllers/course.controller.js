@@ -9,7 +9,7 @@ import { UserRole, UserStatus } from '../helpers/enum.js';
 import enrollmentModel from '../models/enrollment.model.js';
 import reviewModel from '../models/review.model.js';
 import noteModel from '../models/note.model.js';
-import { s3, BUCKET, getPresignedGetUrl } from '../utils/s3.js';
+import { getPresignedGetUrl } from '../utils/s3.js';
 
 export const getCourses = catchAsync(async (req, res) => {
 	const user = req.user;

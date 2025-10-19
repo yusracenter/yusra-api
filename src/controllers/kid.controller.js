@@ -91,6 +91,13 @@ export const generateQRCode = catchAsync(async (req, res) => {
 		return res.status(400).json('Kid has no enrollments');
 	}
 
+	if (kid.enrollments) {
+		const subs = await stripe.subscriptions.retrieve(kid.enrollments.subscriptionId);
+		if (!subs || subs.status !== 'active') {
+			return res.status(400).json('Kid has no active subscriptions');
+		}
+	}
+
 	const existingQRCode = await qrCodeModel.findById(kid.qrCodeModel);
 	if (existingQRCode) {
 		return res.status(400).json('QR Code already exists.');
@@ -172,10 +179,13 @@ export const deleteKid = catchAsync(async (req, res) => {
 		return res.status(404).json('Kid not found');
 	}
 
-	const enrollment = await enrollmentModel.find({ kid: user._id, status: 'active' });
+	const enrollment = await enrollmentModel.findById(user.enrollments);
 
-	if (enrollment.length > 0) {
-		return res.status(400).json('Cannot delete kid with active subscriptions');
+	if (enrollment) {
+		const subs = await stripe.subscriptions.retrieve(enrollment.subscriptionId);
+		if (subs && subs.status === 'active') {
+			return res.status(400).json('Cannot delete kid with active subscriptions');
+		}
 	}
 
 	await qrCodeModel.findByIdAndDelete(user.qrCodeModel);

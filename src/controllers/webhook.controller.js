@@ -90,7 +90,7 @@ export const stripeWebhookHandler = async (req, res) => {
 	try {
 		event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
 	} catch (err) {
-		console.error('❌ Webhook signature verification failed.', err.message);
+		console.error('❌ Webhook signature verification failed:', err.message);
 		return res.status(400).json({ error: `Webhook Error: ${err.message}` });
 	}
 
@@ -102,7 +102,18 @@ export const stripeWebhookHandler = async (req, res) => {
 				break;
 			}
 
+			case 'customer.subscription.updated': {
+				const subscription = event.data.object;
+				if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
+					await markSubscriptionCanceled(subscription.id);
+				} else if (subscription.status === 'active' || subscription.status === 'trialing') {
+					await markSubscriptionActive(subscription.id);
+				}
+				break;
+			}
+
 			default:
+				console.log(`Unhandled event type: ${event.type}`);
 				break;
 		}
 
@@ -115,18 +126,23 @@ export const stripeWebhookHandler = async (req, res) => {
 
 async function markSubscriptionCanceled(subscriptionId) {
 	const enrollment = await enrollmentModel.findOne({ subscriptionId });
-
 	if (!enrollment) {
 		console.warn('⚠️ Enrollment not found for subscription:', subscriptionId);
 		return;
 	}
 
-	await programModel.findOneAndUpdate(
-		{ _id: enrollment.program.toString() },
-		{ $inc: { enrollments: -1 } }
-	);
+	await programModel.updateOne({ _id: enrollment.program }, { $inc: { enrollments: -1 } });
 
-	await enrollmentModel.findByIdAndUpdate(enrollment._id.toString(), {
-		status: 'canceled',
-	});
+	await enrollmentModel.updateOne({ _id: enrollment._id }, { status: 'canceled' });
+
+	console.log(`🔻 Subscription ${subscriptionId} canceled.`);
+}
+
+async function markSubscriptionActive(subscriptionId) {
+	const enrollment = await enrollmentModel.findOne({ subscriptionId });
+	if (!enrollment) return;
+
+	await enrollmentModel.updateOne({ _id: enrollment._id }, { status: 'active' });
+
+	console.log(`✅ Subscription ${subscriptionId} active/trialing.`);
 }
